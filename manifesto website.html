@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>RELATIONAL ENGINE // LANGUAGE-GAME</title>
+<style>
+  :root{
+    --bg:#0b0b0d;
+    --panel:#0f1113;
+    --muted:#8b8f94;
+    --accent:#9be7ff;
+    --glitch-duration:700ms;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;font-size:14px}
+  .wrap{display:grid;grid-template-columns:1fr;gap:14px;padding:18px;max-width:980px;margin:18px auto;}
+  section{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);padding:14px;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,0.01) inset}
+  h1,h2{margin:0 0 8px 0;font-weight:700;letter-spacing:0.06em}
+  h1{font-size:15px}
+  .muted{color:var(--muted);font-weight:500;font-size:13px}
+  /* Boot / Overview */
+  .status{display:flex;gap:12px;flex-wrap:wrap}
+  .status .line{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.015);min-width:180px}
+  .status strong{display:block;font-size:13px}
+  /* Entity Naming Panel */
+  .inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+  .inputs input{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px;border-radius:4px}
+  .btn{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:8px 10px;border-radius:4px;cursor:pointer}
+  .btn.secondary{border-color:rgba(255,255,255,0.06);color:var(--muted)}
+  .named-list{margin-top:8px;font-size:13px}
+  /* Relation Constructor */
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .control{display:flex;flex-direction:column;gap:6px;min-width:180px}
+  .control label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
+  .logline{font-size:12px;color:var(--muted);margin-top:8px}
+  /* SVG area */
+  .diagram{display:flex;gap:12px;align-items:center}
+  .svgwrap{background:rgba(0,0,0,0.04);padding:8px;border-radius:6px}
+  svg{display:block}
+  /* Fluency Machine */
+  .fluency{display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .fluencyText{background:rgba(255,255,255,0.02);padding:10px;border-radius:4px;border:1px solid rgba(255,255,255,0.015);min-height:52px;max-width:680px;white-space:pre-wrap}
+  /* Glitch */
+  .log-area{background:#050507;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);min-height:48px;color:var(--muted);font-size:13px;overflow:auto}
+  /* Counter-Protocol Runner */
+  .runner{display:flex;gap:8px;align-items:center}
+  .runnerBox{background:#030304;border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:4px;min-width:360px}
+  .small{font-size:12px;color:var(--muted)}
+  /* Glitch animation */
+  @keyframes shake {
+    0%{transform:translate(0,0)}
+    20%{transform:translate(-2px,1px)}
+    40%{transform:translate(2px,-1px)}
+    60%{transform:translate(-1px,2px)}
+    80%{transform:translate(1px,-2px)}
+    100%{transform:translate(0,0)}
+  }
+  @keyframes flicker {
+    0%{opacity:1;filter:hue-rotate(0deg) contrast(1)}
+    50%{opacity:.85;filter:hue-rotate(-10deg) contrast(.95)}
+    100%{opacity:1;filter:hue-rotate(0deg) contrast(1)}
+  }
+  .glitch{
+    animation:shake .6s ease-in-out, flicker .6s ease-in-out;
+  }
+  /* utility */
+  .row{display:flex;gap:10px;align-items:center}
+  .right{margin-left:auto}
+  a.protocol{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 1 Boot / Overview -->
+  <section id="boot">
+    <h1>BOOT / OVERVIEW</h1>
+    <div class="muted">system header: RELATIONAL ENGINE</div>
+    <div class="status" aria-hidden="false">
+      <div class="line"><strong>coherence</strong><span id="st-coherence" class="small">nominal</span></div>
+      <div class="line"><strong>assumptions</strong><span id="st-assumptions" class="small">may shift</span></div>
+      <div class="line"><strong>relation</strong><span id="st-relation" class="small">observing</span></div>
+    </div>
+  </section>
+
+  <!-- 2 Entity Naming Panel -->
+  <section id="naming">
+    <h1>ENTITY NAMING PANEL</h1>
+    <div class="inputs">
+      <input id="entA" placeholder="Entity A" aria-label="Entity A">
+      <input id="entB" placeholder="Entity B" aria-label="Entity B">
+      <input id="entC" placeholder="Entity C" aria-label="Entity C">
+    </div>
+    <div class="row">
+      <button id="btnName" class="btn">NAME</button>
+      <div class="named-list" id="namedList" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- 3 Relation Constructor -->
+  <section id="relation">
+    <h1>RELATION CONSTRUCTOR</h1>
+    <div class="controls">
+      <div class="control">
+        <label for="freq">FREQUENCY</label>
+        <input id="freq" type="range" min="0" max="100" value="50">
+        <div class="small">value: <span id="freqVal">50</span></div>
+      </div>
+      <div class="control">
+        <label for="adj">ADJACENCY</label>
+        <input id="adj" type="range" min="0" max="100" value="50">
+        <div class="small">value: <span id="adjVal">50</span></div>
+      </div>
+      <div class="svgwrap">
+        <div class="diagram" aria-hidden="false">
+          <svg id="mesh" width="260" height="140" viewBox="0 0 260 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="relation diagram">
+            <defs>
+              <filter id="glow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <line id="AB" x1="60" y1="40" x2="200" y2="40" stroke="#9be7ff" stroke-linecap="round"/>
+            <line id="AC" x1="60" y1="40" x2="130" y2="100" stroke="#9be7ff" stroke-linecap="round"/>
+            <line id="BC" x1="200" y1="40" x2="130" y2="100" stroke="#9be7ff" stroke-linecap="round"/>
+            <circle id="nodeA" cx="60" cy="40" r="12" fill="#08121a"/>
+            <circle id="nodeB" cx="200" cy="40" r="12" fill="#08121a"/>
+            <circle id="nodeC" cx="130" cy="100" r="12" fill="#08121a"/>
+            <text x="60" y="44" font-size="11" text-anchor="middle" fill="#9be7ff">A</text>
+            <text x="200" y="44" font-size="11" text-anchor="middle" fill="#9be7ff">B</text>
+            <text x="130" y="104" font-size="11" text-anchor="middle" fill="#9be7ff">C</text>
+          </svg>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <div id="relationInterpret" class="small">Weak association detected.</div>
+      </div>
+    </div>
+    <div class="logline">log: <span id="relLog" class="small">frequency set · adjacency set</span></div>
+  </section>
+
+  <!-- 4 Fluency Machine -->
+  <section id="fluency">
+    <h1>FLUENCY MACHINE</h1>
+    <div class="fluency">
+      <label class="row"><input id="fluToggle" type="checkbox"> <span style="margin-left:8px">FLUENCY: ON/OFF</span></label>
+      <div class="fluencyText" id="fluText" aria-live="polite">broken / self-checking</div>
+    </div>
+  </section>
+
+  <!-- 5 Glitch Interrupt -->
+  <section id="glitch">
+    <h1>GLITCH INTERRUPT</h1>
+    <div class="row">
+      <button id="interrupt" class="btn">INTERRUPT</button>
+      <div class="small right muted">use to test relation integrity</div>
+    </div>
+    <div style="height:8px"></div>
+    <div class="log-area" id="logArea" aria-live="polite"></div>
+  </section>
+
+  <!-- 6 Counter-Protocol Runner -->
+  <section id="counter">
+    <h1>COUNTER-PROTOCOL RUNNER</h1>
+    <div class="runner">
+      <div class="runnerBox" id="runnerBox">init</div>
+      <div class="row">
+        <button id="nextBtn" class="btn secondary">NEXT</button>
+        <button id="repeatBtn" class="btn">REPEAT</button>
+      </div>
+    </div>
+    <div class="small" style="margin-top:8px">protocol: may / must / must not / can</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  // Elements
+  const entA = document.getElementById('entA');
+  const entB = document.getElementById('entB');
+  const entC = document.getElementById('entC');
+  const btnName = document.getElementById('btnName');
+  const namedList = document.getElementById('namedList');
+
+  const freq = document.getElementById('freq');
+  const adj = document.getElementById('adj');
+  const freqVal = document.getElementById('freqVal');
+  const adjVal = document.getElementById('adjVal');
+  const relLog = document.getElementById('relLog');
+
+  const svg = document.getElementById('mesh');
+  const lineAB = document.getElementById('AB');
+  const lineAC = document.getElementById('AC');
+  const lineBC = document.getElementById('BC');
+  const relationInterpret = document.getElementById('relationInterpret');
+
+  // track edges removed by interrupt
+  const removedEdges = new Set();
+  const nodeA = document.getElementById('nodeA');
+  const nodeB = document.getElementById('nodeB');
+  const nodeC = document.getElementById('nodeC');
+
+  const fluToggle = document.getElementById('fluToggle');
+  const fluText = document.getElementById('fluText');
+
+  const interrupt = document.getElementById('interrupt');
+  const logArea = document.getElementById('logArea');
+
+  const runnerBox = document.getElementById('runnerBox');
+  const nextBtn = document.getElementById('nextBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+
+  // State
+  let names = {A:'A',B:'B',C:'C'};
+  let protocolLines = [
+    'may observe input',
+    'must not conflate sources',
+    'can re-evaluate relation',
+    'must archive delta',
+    'may resume coherence'
+  ];
+  let runnerIndex = 0;
+
+  // Naming behavior
+  btnName.addEventListener('click', ()=> {
+    const a = entA.value.trim() || 'A';
+    const b = entB.value.trim() || 'B';
+    const c = entC.value.trim() || 'C';
+    names = {A:a,B:b,C:c};
+    renderNames();
+    appendLog(`named ${a}, ${b}, ${c}`);
+    // update diagram labels
+    updateNodeLabels();
+  });
+
+  function renderNames(){
+    namedList.innerHTML = `<div class="small">→ ${escapeHTML(names.A)}</div>
+      <div class="small">→ ${escapeHTML(names.B)}</div>
+      <div class="small">→ ${escapeHTML(names.C)}</div>`;
+  }
+
+  function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+
+  // Relation constructor
+  function updateRelation(){
+    const f = Number(freq.value);
+    const a = Number(adj.value);
+    freqVal.textContent = f;
+    adjVal.textContent = a;
+    // stroke width map 0-100 => 1-12
+    const width = Math.max(1, (f/100)*11 + 1);
+    // adjacency map 0-100 => spacing 40 - 140
+    const spacing = 40 + (a/100)*140;
+    // set positions relative to svg center
+    const cx = 130;
+    const cy = 60;
+    const xA = cx - spacing * 0.7;
+    const yA = cy - (spacing*0.2);
+    const xB = cx + spacing * 0.7;
+    const yB = cy - (spacing*0.2);
+    const xC = cx;
+    const yC = cy + (spacing*0.6);
+    nodeA.setAttribute('cx', xA);
+    nodeA.setAttribute('cy', yA);
+    nodeB.setAttribute('cx', xB);
+    nodeB.setAttribute('cy', yB);
+    nodeC.setAttribute('cx', xC);
+    nodeC.setAttribute('cy', yC);
+    // lines positions
+    lineAB.setAttribute('x1', xA); lineAB.setAttribute('y1', yA);
+    lineAB.setAttribute('x2', xB); lineAB.setAttribute('y2', yB);
+    lineAC.setAttribute('x1', xA); lineAC.setAttribute('y1', yA);
+    lineAC.setAttribute('x2', xC); lineAC.setAttribute('y2', yC);
+    lineBC.setAttribute('x1', xB); lineBC.setAttribute('y1', yB);
+    lineBC.setAttribute('x2', xC); lineBC.setAttribute('y2', yC);
+
+    // Apply existence and style rules based on frequency
+    function applyLineRule(line){
+      const id = line.id;
+      if(removedEdges.has(id)){
+        line.style.display = 'none';
+        return;
+      }
+      if(f < 30){
+        line.style.display = 'none';
+      } else if(f <= 70){
+        line.style.display = '';
+        line.setAttribute('stroke-dasharray','6,4');
+        line.setAttribute('stroke-opacity','0.85');
+      } else {
+        line.style.display = '';
+        line.removeAttribute('stroke-dasharray');
+        line.setAttribute('stroke-opacity','1');
+      }
+      line.setAttribute('stroke-width', width.toFixed(2));
+    }
+
+    [lineAB,lineAC,lineBC].forEach(applyLineRule);
+
+    // interpretation text by frequency
+    let interpText = '';
+    if(f < 30) interpText = 'No relation inferred.';
+    else if(f <= 70) interpText = 'Weak association detected.';
+    else interpText = 'Strong relation assumed.';
+
+    // adjacency influences interpretation
+    const adjText = (a < 50) ? 'Relation interpreted as causality.' : 'Relation interpreted as co-occurrence.';
+    relationInterpret.textContent = interpText + ' ' + adjText;
+
+    // text labels: update positioned text nodes (simple approach: remove and re-add)
+    refreshTextLabels(xA,yA,xB,yB,xC,yC);
+    relLog.textContent = `frequency ${f} · adjacency ${a}`;
+  }
+
+  function refreshTextLabels(ax,ay,bx,by,cx,cy){
+    // remove existing label texts
+    Array.from(svg.querySelectorAll('text')).forEach(t=>t.remove());
+    const tA = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tA.setAttribute('x', ax);
+    tA.setAttribute('y', ay+4);
+    tA.setAttribute('font-size','11');
+    tA.setAttribute('text-anchor','middle');
+    tA.setAttribute('fill','#9be7ff');
+    tA.textContent = names.A || 'A';
+    svg.appendChild(tA);
+    const tB = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tB.setAttribute('x', bx);
+    tB.setAttribute('y', by+4);
+    tB.setAttribute('font-size','11');
+    tB.setAttribute('text-anchor','middle');
+    tB.setAttribute('fill','#9be7ff');
+    tB.textContent = names.B || 'B';
+    svg.appendChild(tB);
+    const tC = document.createElementNS('http://www.w3.org/2000/svg','text');
+    tC.setAttribute('x', cx);
+    tC.setAttribute('y', cy+4);
+    tC.setAttribute('font-size','11');
+    tC.setAttribute('text-anchor','middle');
+    tC.setAttribute('fill','#9be7ff');
+    tC.textContent = names.C || 'C';
+    svg.appendChild(tC);
+  }
+
+  function updateNodeLabels(){ // initial called after naming
+    // force a relation update to refresh labels with current positions
+    updateRelation();
+  }
+
+  freq.addEventListener('input', ()=>{
+    updateRelation();
+    appendLog(`frequency → ${freq.value}`);
+  });
+  adj.addEventListener('input', ()=>{
+    updateRelation();
+    appendLog(`adjacency → ${adj.value}`);
+  });
+
+  // Fluency Machine
+  fluToggle.addEventListener('change', ()=>{
+    if(fluToggle.checked){
+      fluText.textContent = 'smooth / authoritative';
+      appendLog('fluency ON');
+      document.getElementById('st-coherence').textContent = 'stable';
+    } else {
+      fluText.textContent = 'broken / self-checking';
+      appendLog('fluency OFF');
+      document.getElementById('st-coherence').textContent = 'nominal';
+    }
+  });
+
+  // Glitch Interrupt
+  interrupt.addEventListener('click', ()=>{
+    // apply glitch class briefly
+    document.body.classList.add('glitch');
+    setTimeout(()=>document.body.classList.remove('glitch'), 700);
+    // insert line into log area
+    insertLog('[relation assumed]');
+    // distort most recent text output slightly (fluText)
+    distortText(fluText);
+    appendLog('interrupt');
+
+    // randomly remove one visible edge (respect removedEdges)
+    const edges = [lineAB,lineAC,lineBC].filter(l=>{
+      return l.style.display !== 'none' && !removedEdges.has(l.id);
+    });
+    if(edges.length > 0){
+      const pick = edges[Math.floor(Math.random()*edges.length)];
+      removedEdges.add(pick.id);
+      pick.style.display = 'none';
+      appendLog(`edge removed: ${pick.id}`);
+      insertLog(`[edge ${pick.id} removed]`);
+    }
+  });
+
+  function insertLog(line){
+    const el = document.createElement('div');
+    el.textContent = line;
+    el.style.color = '#cfefff';
+    el.style.fontSize = '13px';
+    logArea.prepend(el);
+  }
+
+  function appendLog(line){
+    relLog.textContent = line + ' · ' + relLog.textContent;
+    // also push to log area for trace
+    const el = document.createElement('div');
+    el.textContent = line;
+    el.className = 'small';
+    logArea.prepend(el);
+    // cap log length
+    while(logArea.childElementCount > 40) logArea.removeChild(logArea.lastChild);
+  }
+
+  function distortText(el){
+    const original = el.textContent;
+    // simple distortion: insert random dashes and line breaks
+    const garble = original.split('').map((c,i)=> (i%7===0 ? c+'-' : c)).join('');
+    el.textContent = garble.split('').slice(0, Math.min(160, garble.length)).join('') + '\n—';
+    setTimeout(()=>{ el.textContent = original; }, 1500);
+  }
+
+  // Counter-Protocol Runner
+  function showRunner(){
+    runnerBox.textContent = protocolLines[runnerIndex] || '---';
+  }
+  nextBtn.addEventListener('click', ()=>{
+    runnerIndex = Math.min(protocolLines.length - 1, runnerIndex + 1);
+    showRunner();
+    appendLog(`runner → ${runnerIndex+1}`);
+  });
+  repeatBtn.addEventListener('click', ()=>{
+    runnerIndex = 0;
+    showRunner();
+    appendLog('runner reset');
+  });
+
+  // initial setup
+  renderNames();
+  updateRelation();
+  showRunner();
+  // enable Enter to name
+  [entA,entB,entC].forEach(inp=>inp.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ btnName.click(); }
+  }));
+})();
+</script>
+</body>
+</html>
